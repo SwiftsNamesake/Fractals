@@ -14,6 +14,7 @@
 
 
 import tkinter as tk
+import math
 from collections import namedtuple
 from itertools import count
 from random import random
@@ -38,6 +39,29 @@ def RAD(deg):
 
 def DEG(rad):
 	return rad*180.0/π
+
+
+class Tree:
+
+	def __init__(self):
+		self.vtx = 0+0j
+		self.branches = []
+		self.canvas = None
+		self.IDs = []
+
+	def coords(self, beg, end):
+		return beg.real, beg.imag, end.real, end.imag
+
+	def render(self, **options):
+		for branch in self.branches:
+			self.IDs.append(*self.coords(self.vtx, branch.vtx))
+			branch.render(**options)
+
+	def traverse(self):
+		# TODO: Recursive traversal
+		for branch in self.branch:
+			yield branch
+
 
 
 def tree(size, pos, angle, depth, ratio, offshoots):
@@ -74,6 +98,7 @@ def tree(size, pos, angle, depth, ratio, offshoots):
 	#size *= ratio
 	span  = angle*(offshoots-1) # Angle between the leftmost and rightmost offshoot TODO: Allow for varying angles
 	start = -span/2 			# Angle of the leftmost offshoot (with respect to its parent branch)
+	-RAD(15)
 
 	#beg = trunk.end # First endpoint
 
@@ -96,7 +121,7 @@ def branchCoords(branch):
 
 
 def renderTree(canvas, tree, **options):
-	return [canvas.create_line(*branchCoords(branch), **options) for branch in tree]
+	return [canvas.create_line(*branchCoords(branch), width=(5-branch.depth)*2, **options) for branch in tree]
 
 
 def createContext(size):
@@ -118,26 +143,27 @@ def erase(branches, context):
 	
 def animate(angle, context):
 	#branches = tree(70-70j, SIZE*0.5, angle, 6, 0.70, 3)
-	branches = tree(rect(70, angle*2), SIZE*0.5, angle, 6, 0.70, 3)
+	# TODO: Simulate swaying in the wind
+	# TODO: Accept arguments for tree properties
+	branches = tree(rect(70, angle*5), SIZE*0.5, angle, 6, 0.70, 3)
 	angle = angle % 360
-	return renderTree(context.canvas, branches, width=4, fill='#804040'), branches # '#%.2x%.2x%.2x' % (angle*3.2%255, angle%255, angle%255)), branches
+	return renderTree(context.canvas, branches, capstyle=tk.ROUND, fill='#804040'), branches # '#%.2x%.2x%.2x' % (angle*3.2%255, angle%255, angle%255)), branches
 
 
 def createAnimator(start, delta, context, fps):
 	frames = (animate(angle, context) for angle in count(start, delta))
 	prev, branches = [], []
+	num = 0
 
 	def forward():
 		return next(frames)
 	
 	def nextFrame():
-		nonlocal prev, branches
+		nonlocal prev, branches, num
 		erase(prev, context)
 		prev, branches = forward()
-		#print(*((x-DEG(delta/2), x+DEG(delta/2)) for x in (0, 90, 180, 270)))
-		#straight = any(mini <= DEG(polar(branches[-1].end-branches[-1].beg)[1]) <= maxi for mini, maxi in ((x-DEG(delta/2), x+DEG(delta/2)) for x in (0, 90, 180, 270)))
-		#print(straight)
-		context.window.after(1000*3 if False else 1000//fps, nextFrame)
+		context.window.after(1000//fps, nextFrame)
+		num += 1
 
 	return nextFrame
 
@@ -148,8 +174,6 @@ def createProgressbar(pos, size, context, fps):
 
 def main():
 	context = createContext(SIZE)
-	#branches = tree(50+0j, 1920/3/2+1080j/3-70j, 20, 4, 0.60, 3)
-	#prev = renderTree(context.canvas, branches, width=3)
 	createAnimator(RAD(0), RAD(0.8), context, 30)()
 
 	context.window.mainloop()
