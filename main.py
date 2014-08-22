@@ -85,7 +85,7 @@ def tree(size, pos, angle, depth, ratio, offshoots):
 			beg, end, depth, = branches[-offshoots**(level-1):][subtree]
 			dθ = polar(end - beg)[1] # Angle offset of previous branch
 			#angleOffset = asin((delta.imag)/sqrt((delta.real)**2 + (delta.imag)**2))*180.0/π
-			subtrees += bifurcation(size*ratio**level, end, dθ+start, level)
+			subtrees += bifurcation(abs(size)*ratio**level, end, dθ+start, level)
 		branches += subtrees
 
 	return branches
@@ -117,9 +117,10 @@ def erase(branches, context):
 
 	
 def animate(angle, context):
-	branches = tree(0-70j, SIZE*0.5, angle, 6, 0.70, 3)
+	#branches = tree(70-70j, SIZE*0.5, angle, 6, 0.70, 3)
+	branches = tree(rect(70, angle*2), SIZE*0.5, angle, 6, 0.70, 3)
 	angle = angle % 360
-	return renderTree(context.canvas, branches, width=4, fill='#%.2x%.2x%.2x' % (angle*3.2%255, angle%255, angle%255)), branches
+	return renderTree(context.canvas, branches, width=4, fill='#804040'), branches # '#%.2x%.2x%.2x' % (angle*3.2%255, angle%255, angle%255)), branches
 
 
 def createAnimator(start, delta, context, fps):
@@ -136,7 +137,6 @@ def createAnimator(start, delta, context, fps):
 		#print(*((x-DEG(delta/2), x+DEG(delta/2)) for x in (0, 90, 180, 270)))
 		#straight = any(mini <= DEG(polar(branches[-1].end-branches[-1].beg)[1]) <= maxi for mini, maxi in ((x-DEG(delta/2), x+DEG(delta/2)) for x in (0, 90, 180, 270)))
 		#print(straight)
-		print(DEG(polar(branches[-1].end-branches[-1].beg)[1]))
 		context.window.after(1000*3 if False else 1000//fps, nextFrame)
 
 	return nextFrame
@@ -150,7 +150,7 @@ def main():
 	context = createContext(SIZE)
 	#branches = tree(50+0j, 1920/3/2+1080j/3-70j, 20, 4, 0.60, 3)
 	#prev = renderTree(context.canvas, branches, width=3)
-	createAnimator(RAD(45), RAD(2.0), context, 30)()
+	createAnimator(RAD(0), RAD(0.8), context, 30)()
 
 	context.window.mainloop()
 
