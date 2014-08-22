@@ -144,6 +144,8 @@ def erase(branches, context):
 def animate(angle, context):
 	#branches = tree(70-70j, SIZE*0.5, angle, 6, 0.70, 3)
 	# TODO: Simulate swaying in the wind
+	# TODO: Audio, loudness determines strength
+	# TODO: Forest, leaves, snow
 	# TODO: Accept arguments for tree properties
 	branches = tree(rect(70, angle*5), SIZE*0.5, angle, 6, 0.70, 3)
 	angle = angle % 360
@@ -172,9 +174,51 @@ def createProgressbar(pos, size, context, fps):
 	return 0
 
 
+keys = {
+	'Left': False,
+	'Right': False
+}
+
+
+def onKeyDown(event):
+	keys[event.keysym] = True
+
+def onKeyUp(event):
+	keys[event.keysym] = False
+
+	
+	
 def main():
 	context = createContext(SIZE)
-	createAnimator(RAD(0), RAD(0.8), context, 30)()
+	sky 	= context.canvas.create_rectangle((0,0,WIDTH,HEIGHT//2), fill='#B8F3FA', width=0)
+	ground 	= context.canvas.create_rectangle((0,HEIGHT//2,WIDTH,HEIGHT), fill='#07E40D', width=0)
+	
+	context.window.bind('<Key>', onKeyDown)
+	context.window.bind('<KeyRelease>', onKeyUp)
+
+	theta = 0.0
+	dθ = RAD(2)
+
+	branches = tree(rect(70, RAD(-90)), SIZE*0.5, theta, 6, 0.70, 3)
+	IDs = renderTree(context.canvas, branches, fill='#633A03')
+
+	def nudge():
+		nonlocal theta, branches, IDs
+		context.window.after(1000//30, nudge)
+		if keys['Left']:
+			theta -= dθ
+		elif keys['Right']:
+			theta += dθ
+		else:
+			return
+
+		erase(IDs, context) # TODO: Redraw and animate existing tree
+		branches = tree(rect(70, RAD(-90)), SIZE*0.5, theta, 6, 0.70, 3)
+		IDs = renderTree(context.canvas, branches, fill='#633A03')
+
+	nudge()
+	#createAnimator(RAD(0), RAD(0.8), context, 30)()
+	
 
 	context.window.mainloop()
 
