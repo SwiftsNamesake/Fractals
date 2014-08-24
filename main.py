@@ -15,7 +15,7 @@
 
 import tkinter as tk
 import math
-from Graphics import *
+from Graphics import π, RAD, DEG, rect, polar
 from collections import namedtuple
 from itertools import count
 from random import random
@@ -122,6 +122,7 @@ def createContext(size):
 	window = tk.Tk()
 	window.resizable(width=False, height=False)
 	window.title('Fractals')
+	# window.attributes('-alpha', 0.1)
 
 	canvas = tk.Canvas(width=size.real, height=size.imag)
 	canvas.pack()
