@@ -15,11 +15,10 @@
 
 import tkinter as tk
 import math
+from Graphics import *
 from collections import namedtuple
 from itertools import count
 from random import random
-from math import sqrt, asin
-from cmath import sin, cos, rect, polar, pi as π
 
 
 Context = namedtuple('Context', 'window, canvas')
@@ -31,14 +30,6 @@ Branch  = namedtuple('Branch', 'beg end depth')
 
 SIZE = (1920+1080j)*0.6
 WIDTH, HEIGHT = SIZE.real, SIZE.imag
-
-
-def RAD(deg):
-	return deg*π/180.0
-
-
-def DEG(rad):
-	return rad*180.0/π
 
 
 class Tree:
@@ -103,7 +94,9 @@ def tree(size, pos, angle, depth, ratio, offshoots):
 	#beg = trunk.end # First endpoint
 
 	#level = 2 # Current level or depth (indexing 0 or 1?)
-
+	#while True:
+		#yield branches
+	
 	for level in range(1, depth):
 		subtrees = []
 		for subtree in range(offshoots**(level-1)):
@@ -112,7 +105,7 @@ def tree(size, pos, angle, depth, ratio, offshoots):
 			#angleOffset = asin((delta.imag)/sqrt((delta.real)**2 + (delta.imag)**2))*180.0/π
 			subtrees += bifurcation(abs(size)*ratio**level, end, dθ+start, level)
 		branches += subtrees
-
+	
 	return branches
 
 
@@ -121,7 +114,7 @@ def branchCoords(branch):
 
 
 def renderTree(canvas, tree, **options):
-	return [canvas.create_line(*branchCoords(branch), width=(5-branch.depth)*2, **options) for branch in tree]
+	return [canvas.create_line(*branchCoords(branch), width=(5-branch.depth)*3, **options) for branch in tree]
 
 
 def createContext(size):
@@ -196,10 +189,10 @@ def main():
 	context.window.bind('<Key>', onKeyDown)
 	context.window.bind('<KeyRelease>', onKeyUp)
 
-	theta = 0.0
+	theta = RAD(45.0)
 	dθ = RAD(2)
 
-	branches = tree(rect(70, RAD(-90)), SIZE*0.5, theta, 6, 0.70, 3)
+	branches = tree(rect(70, RAD(-90)), SIZE*0.5, theta, 5, 0.70, 3)
 	IDs = renderTree(context.canvas, branches, fill='#633A03')
 
 	def nudge():
@@ -212,9 +205,11 @@ def main():
 		else:
 			return
 
-		erase(IDs, context) # TODO: Redraw and animate existing tree
-		branches = tree(rect(70, RAD(-90)), SIZE*0.5, theta, 6, 0.70, 3)
-		IDs = renderTree(context.canvas, branches, fill='#633A03')
+		#erase(IDs, context) # TODO: Redraw and animate existing tree
+		branches = tree(rect(70, RAD(-90)), SIZE*0.5, theta, 5, 0.70, 3)
+		#IDs = renderTree(context.canvas, branches, fill='#633A03')
+		for twig, ID in zip(branches, IDs):
+			context.canvas.coords(ID, *branchCoords(twig))
 
 	nudge()
 	#createAnimator(RAD(0), RAD(0.8), context, 30)()
