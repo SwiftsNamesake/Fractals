@@ -14,7 +14,7 @@
 
 
 import pygame
-from math import sin, cos, pi as π
+from math import sin, cos, copysign, pi as π
 from math import sqrt, asin, sin, cos
 from cmath import rect, polar, pi as π # sin, cos, 
 from random import randint
@@ -22,14 +22,28 @@ from functools import reduce
 
 from SwiftUtils import Console
 
+
 code = [
+	'<fg=DEF>class</> Nihilo:',
+	'    <fg=DEF>def</> <fg=DEF>__init__</>(<fg=ARG>self</>, <fg=ARG>ex</>):',
+	'        <fg=VAR>self</>.ex <fg=OP>=</> <fg=VAR>ex</>',
+	'        <fg=VAR>self</>.creatio <fg=OP>=</> <fg=VAR>creatio</>',
+	'',
 	'<fg=DEF>def</> <fg=FUN>RAD</>(<fg=ARG>deg</>):',
 	'    <fg=OP>return</> <fg=VAR>deg</><fg=OP>*</><fg=VAR>pi</><fg=OP>/</><fg=LIT>180.0</>',
 	'',
 	'<fg=OP>while</> <fg=LIT>True</>:',
 	'    <fg=DEF>print</>(<fg=STR>\'Corvus corax Felix Phalanx\'</>)',
 	'    <fg=DEF>print</>(<fg=STR>\'Venison\'s deer, isn\'t it?\'</>)',
-	'    <fg=DEF>print</>(<fg=STR>\'</><fg=LIT>\\\'</><fg=STR>Tis a consummation...\'</>)'
+	'    <fg=DEF>print</>(<fg=STR>\'</><fg=LIT>\\\'</><fg=STR>Tis a consummation...\'</>)',
+	'',
+	'<fg=OP>for</> <fg=VAR>letter</> <fg=OP>in</> <fg=STR>\'Jonatan\'</>:',
+	'    <fg=COM># Prints each letter in my name</>',
+	'    <fg=DEF>print</>(<fg=STR>\'There is a</> <fg=LIT>%s</> <fg=STR>in my name.\'</> <fg=OP>%</> <fg=VAR>letter</>)',
+	#'    <fg=DEF>print</>(<fg=STR>\'There is a</> <fg=LIT>%s</> <fg=STR>in my name.\'</>.<fg=DEF>format</>(<fg=VAR>letter</>))'
+	'',
+	'<fg=OP>if</> <fg=VAR>__name__</> <fg=OP>==</> <fg=STR>\'__main__\'</>:',
+	'    <fg=VAR>main</>()'
 ]#[2:]
 
 # Background: #272822
@@ -40,6 +54,7 @@ code = [
 # String: # 230 219 116
 # Variable: # 248 248 242
 
+# TODO: More properties (eg. fonts, italics), nesting
 colours = {
 	'BG': 	(39, 40, 34),		# Background
 	'DEF': 	(102, 217, 239),	# Def keyword
@@ -49,12 +64,16 @@ colours = {
 	'STR': 	(230, 219, 116),	# String
 	'VAR': 	(248, 248, 242),	# Variable
 	'FUN': 	(166, 182, 36),		# Function name
+	'COM': 	(107, 113, 94),		# Comment
 	'WHITE': (255, 255, 255),	#
-	'BLACK': (0, 0, 0)
-	# 'COM': () # Comment
+	'BLACK': (0, 0, 0)			#
 }
 
 
+
+#==============================================================================
+# Typography
+#==============================================================================
 def renderLine(line, size, font, pos):
 	# TODO: Width of previous strings (currently assumed to be size)
 	# TODO: Combine tokens in a single surface (?)
@@ -80,13 +99,17 @@ def renderLine(line, size, font, pos):
 
 
 def renderLines(lines, size, font, pos):
-	raise NotImplementedError
+	raise NotImplementedError0
 
 
 def mergeSurfaces(surfaces):
 	raise NotImplementedError
 
 
+
+#==============================================================================
+# Utilities
+#==============================================================================
 def RAD(deg):
 	return deg*π/180.0
 
@@ -95,11 +118,32 @@ def DEG(rad):
 	return rad*180.0/π
 
 
+def sign(value):
+	return value if value == 0 else copysign(1, value)
+
+
+def clamp(mini, maxi, value):
+	return sorted((mini, maxi, value))[1]
+
+
+
+#==============================================================================
+# Graphics
+#==============================================================================
 def star(surface, pos, length, points, colour, theta=0):
 	vertices = [(pos[0]+length*cos(p*2*π/points-theta), pos[1]+length*sin(p*2*π/points-theta)) for p in range(points)]
 	return pygame.draw.aalines(surface, colour, True, vertices[::2]+vertices[1::2], 2)
 
 
+
+def renderTree(surface, tree):
+	for branch in tree:
+		pygame.draw.aaline(surface, (0,0,0), tree[:2])
+
+
+#==============================================================================
+# Windows and events
+#==============================================================================
 def createContext(size):
 	pygame.init()
 	surface = pygame.display.set_mode(size)
@@ -108,46 +152,91 @@ def createContext(size):
 
 
 def main():
-	surface, clock = createContext((1024, 1024//2))
+	SIZE = (int(1024*2*0.75), 720)
+	surface, clock = createContext(SIZE)
 
 	θ = 0.0
 
-	#print('\n'.join(pygame.font.get_fonts()))
+	# TODO: Click and drag
+	# TODO: Scroll inertia (...)
+	scrollX, scrollY = 0.0, 0.0
+	dxScroll, dyScroll = 0.0, 0.0
+	intensity = 1.25 # Intensity of scroll bar
 
-	#labels = [(pygame.font.SysFont(font, 20).render(font, 3, (0x34, 0xDF, 0x3D)), pygame.font.SysFont(font, 20).render(font, 3, (0,0,0))) for font in pygame.font.get_fonts()[:50]]
 	labels = [pygame.font.SysFont(font, 20).render(font, 3, (randint(0, 255), randint(0, 255), randint(0, 255))) for font in pygame.font.get_fonts()[:100]]
 
-	# Syntax highlighting
-	con = Console.Console()
 	# TODO: Lambda serveing the purpose of a let expression (?)
+	con = Console.Console()
 	lines = (lambda size: [renderLine(con.parseMarkup(line), size, ['kristenitc', 'oldenglishtext', 'emilbus mon'][0], (400, 20+n*size)) for n, line in enumerate(code)])(22)
 
 	# Images
 	dice = pygame.image.load('C:/Users/Jonatan/Desktop/Python/resources/dice.png').convert()
 
+	# Mouse
+	# TODO: Dynamic text utilities
+	mouse = pygame.mouse.get_pos()
+	mFont = pygame.font.SysFont('oldenglishtext', 20)
+	mCoords = None
+	mPrev = None
+
+	# Main loop
 	while True:
 		ev = pygame.event.poll()
 		if ev.type == pygame.QUIT:
 			break;
 		elif ev.type == pygame.MOUSEMOTION:
-			pass
+			mouse = ev.pos
+			mCoords = mFont.render('X: %d | Y: %d' % mouse, 3, (0xFC, 0xCC, 0x3E))
+			coll = pygame.Rect(SIZE[0]-15, -scrollY, 10, 60).collidepoint(ev.pos)
+			intensity = 1.5 if coll else 1.25
+			if coll and pygame.mouse.get_pressed()[0]:
+				scrollY = -(mouse[1]-mPrev[1])
+				mPrev = mouse
+		elif (ev.type == pygame.MOUSEBUTTONDOWN) and (ev.button in (4, 5)):
+			# Scroll
+			#dxScroll += (1 if ev.button == 4 else -1)*7
+			dyScroll += (1 if ev.button == 4 else -1)*7
+			print('scroll')
+		elif (ev.type == pygame.MOUSEBUTTONDOWN) and (ev.button == 1):
+			mPrev = pygame.mouse.get_pos()
+		
+		# Scroll
+		scrollX += dxScroll
+		scrollY += dyScroll
+		dxScroll += sign(-dxScroll)*0.25
+		dyScroll += sign(-dyScroll)*0.25
 
+		# Background
 		surface.fill([(0, 72, 50), (0xFF, 0xFF, 0), colours['BG']][2])
 		θ += 0.02
 
-		pygame.draw.polygon(surface, ((255+255*cos(θ))//2, (255+255*sin(θ))//2, 0xF9), (lambda sides: [(160+60*(sin(θ)+1.5)*cos(θ+s*2*π/sides),
+		# Mouse
+		if mCoords is not None: surface.blit(mCoords, (20, 20))
+		#pygame.draw.polygon(surface, ((255+255*cos(θ))//2, (255+255*sin(θ))//2, 0xF9), (lambda sides: [(160+60*(sin(θ)+1.5)*cos(θ+s*2*π/sides),
+		#																  160+60*(sin(θ)+1.5)*sin(θ+s*2*π/sides)) for s in range(sides)])(10), 5)
+
+		pygame.draw.aalines(surface, ((255+255*cos(θ))//2, (255+255*sin(θ))//2, 0xF9), True, (lambda sides: [(160+60*(sin(θ)+1.5)*cos(θ+s*2*π/sides),
 																		  160+60*(sin(θ)+1.5)*sin(θ+s*2*π/sides)) for s in range(sides)])(10), 5)
-		pygame.draw.circle(surface, (0xFF, 0x2C, 0x1C), (650, 425), 60, 5)
+		
+		X, Y = 830, 80
+		pygame.draw.circle(surface, (0xFF, 0x2C, 0x1C), (X, Y), 60, 5)
 		# pygame.gfxdraw.aacircle(surface, (0xFF, 0x2C, 0x1C), (650, 425), 60, 5)
-		pygame.draw.aaline(surface, (0x84, 0x9B, 0xF9), (650+60*cos(θ*0.5), 425+60*sin(θ*0.5)), (650+60*cos(θ*0.2), 425+60*sin(θ*0.2)), 5)
+		pygame.draw.aaline(surface, (0x84, 0x9B, 0xF9), (X+60*cos(θ*0.5), Y+60*sin(θ*0.5)), (X+60*cos(θ*0.2), Y+60*sin(θ*0.2)), 5)
 		star(surface, (200, 200), 45, 7, (0xCE, 0x26, 0x1E), π/2+θ)
 		
+		#pygame.transform.rotate(dice, θ*15)
 		surface.blit(dice, (200, 200))
 
+		# Scrollbar
+		# TODO: Glow on hover
+		pygame.draw.rect(surface, (colours['BG'][0]*intensity, colours['BG'][0]*intensity, colours['BG'][0]*intensity), pygame.Rect(SIZE[0]-15, -scrollY, 10, 60))
+
+		# Blit code
 		for n, line in enumerate(lines):
 			for token in line:
-				surface.blit(token[0], (token[1][0], token[1][1]+n*15))
+				surface.blit(token[0], (token[1][0], scrollY+token[1][1]+n*15))
 
+		# Blit font names
 		for n, label in enumerate(labels):
 			# surface.blit(label[1], (52, 52+n*25-(θ*30)%(25*len(labels))))
 			# surface.blit(label[0], (50, 50+n*25-(θ*30)%(25*len(labels))))

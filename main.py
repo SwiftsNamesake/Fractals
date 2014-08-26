@@ -1,5 +1,5 @@
 #
-# Fractals.py
+# Fractals - Main
 # Creating recursive geometries with tkinter
 #
 # Jonatan H Sundqvist
