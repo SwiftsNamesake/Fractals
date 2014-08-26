@@ -14,13 +14,15 @@
 
 
 import pygame
-from math import sin, cos, copysign, pi as π
-from math import sqrt, asin, sin, cos
+from math import sin, cos, sqrt, asin, copysign, pi as π
 from cmath import rect, polar, pi as π # sin, cos, 
 from random import randint
 from functools import reduce
 
 from SwiftUtils import Console
+from Utilities import *
+
+import Fractals
 
 
 code = [
@@ -74,7 +76,7 @@ colours = {
 #==============================================================================
 # Typography
 #==============================================================================
-def renderLine(line, size, font, pos):
+def renderLine(line : '[Tokens]', size : int, font : str, pos : '(int, int)'):
 	# TODO: Width of previous strings (currently assumed to be size)
 	# TODO: Combine tokens in a single surface (?)
 	# TODO: Save font object(?)
@@ -91,7 +93,7 @@ def renderLine(line, size, font, pos):
 		return font.render(token.text, 2, colours[token.fg])
 
 	# Font.get_linesize
-	return reduce(lambda prev, token: prev+[(renderToken(token), totalSize(prev))], line, [])
+	return reduce(lambda prev, token: prev+[(renderToken(token), totalSize(prev))], line, []) # TODO: Cache the size calculations (?)
 
 	#return [(pygame.font.SysFont(font, size).render(token.text, 2, colours[token.fg]),
 	#		(pos[0]+size*0.62*sum(len(prev.text) for prev in line[:n]), pos[1])) for n, token in enumerate(line)]
@@ -99,32 +101,17 @@ def renderLine(line, size, font, pos):
 
 
 def renderLines(lines, size, font, pos):
-	raise NotImplementedError0
+	# TODO: Vertical padding, different fonts and line heights
+	def nextItem(prev, tokens):
+		line = renderLine(tokens, size, font, prev[0])
+		return (prev[0]+line.get_size()[1], prev[1]+[line])
+
+	return reduce(lambda prev, line: nextItem(prev, line), lines, (pos[1], []))
+	raise NotImplementedError
 
 
 def mergeSurfaces(surfaces):
 	raise NotImplementedError
-
-
-
-#==============================================================================
-# Utilities
-#==============================================================================
-def RAD(deg):
-	return deg*π/180.0
-
-
-def DEG(rad):
-	return rad*180.0/π
-
-
-def sign(value):
-	return value if value == 0 else copysign(1, value)
-
-
-def clamp(mini, maxi, value):
-	return sorted((mini, maxi, value))[1]
-
 
 
 #==============================================================================
@@ -136,9 +123,8 @@ def star(surface, pos, length, points, colour, theta=0):
 
 
 
-def renderTree(surface, tree):
-	for branch in tree:
-		pygame.draw.aaline(surface, (0,0,0), tree[:2])
+def renderTree(surface, tree, colour):
+	return [pygame.draw.aaline(surface, colour, (branch.beg.real, branch.beg.imag), (branch.end.real, branch.end.imag)) for branch in tree]
 
 
 #==============================================================================
@@ -176,6 +162,7 @@ def main():
 	# TODO: Dynamic text utilities
 	mouse = pygame.mouse.get_pos()
 	mFont = pygame.font.SysFont('oldenglishtext', 20)
+	mMarkup = renderLines([con.parseMarkup('<fg=OP>X</>: %d' % mouse[0]), ('<fg=OP>Y</>: %d' % mouse[1])], 20, 'oldenglishtext', (20, 20))
 	mCoords = None
 	mPrev = None
 
@@ -244,6 +231,7 @@ def main():
 			# surface.blit(pygame.transform.rotate(label, 12), (50, 50+n*25-(θ*30)%(25*len(labels))))
 			#surface.blit(pygame.transform.laplacian(label[0]), (50, 50+n*25-(θ*30)%(25*len(labels))))
 
+		renderTree(surface, Fractals.tree(rect(70, θ), (SIZE[0]*0.5+SIZE[1]*0.5j), θ*0.5, 6, 0.70, 3), (0xCF, 0xCC, 0x15))
 		pygame.display.flip()
 		clock.tick(60)
 
