@@ -76,7 +76,7 @@ colours = {
 #==============================================================================
 # Typography
 #==============================================================================
-def renderLine(line : '[Tokens]', size : int, font : str, pos : '(int, int)'):
+def renderLine(line : '[Tokens]', size : int, font : str, pos : '(int, int)') -> '[Surface]':
 	# TODO: Width of previous strings (currently assumed to be size)
 	# TODO: Combine tokens in a single surface (?)
 	# TODO: Save font object(?)
@@ -102,11 +102,13 @@ def renderLine(line : '[Tokens]', size : int, font : str, pos : '(int, int)'):
 
 def renderLines(lines, size, font, pos):
 	# TODO: Vertical padding, different fonts and line heights
+	# TODO: Merge buffers (?)
 	def nextItem(prev, tokens):
-		line = renderLine(tokens, size, font, prev[0])
-		return (prev[0]+line.get_size()[1], prev[1]+[line])
+		line = renderLine(tokens, size, font, (pos[0], prev[0]))
+		# print(line)
+		return (prev[0]+line[0][0].get_size()[1], prev[1]+[line])
 
-	return reduce(lambda prev, line: nextItem(prev, line), lines, (pos[1], []))
+	return reduce(lambda prev, line: nextItem(prev, line), lines, (pos[1], []))[1]
 	raise NotImplementedError
 
 
@@ -120,7 +122,6 @@ def mergeSurfaces(surfaces):
 def star(surface, pos, length, points, colour, theta=0):
 	vertices = [(pos[0]+length*cos(p*2*π/points-theta), pos[1]+length*sin(p*2*π/points-theta)) for p in range(points)]
 	return pygame.draw.aalines(surface, colour, True, vertices[::2]+vertices[1::2], 2)
-
 
 
 def renderTree(surface, tree, colour):
@@ -149,11 +150,14 @@ def main():
 	dxScroll, dyScroll = 0.0, 0.0
 	intensity = 1.25 # Intensity of scroll bar
 
+	# Typography
+	fontNames = ['kristenitc', 'oldenglishtext', 'emilbus mon', 'blackletter']
+
 	labels = [pygame.font.SysFont(font, 20).render(font, 3, (randint(0, 255), randint(0, 255), randint(0, 255))) for font in pygame.font.get_fonts()[:100]]
 
 	# TODO: Lambda serveing the purpose of a let expression (?)
 	con = Console.Console()
-	lines = (lambda size: [renderLine(con.parseMarkup(line), size, ['kristenitc', 'oldenglishtext', 'emilbus mon'][0], (400, 20+n*size)) for n, line in enumerate(code)])(22)
+	#lines = (lambda size: [renderLine(con.parseMarkup(line), size, ['kristenitc', 'oldenglishtext', 'emilbus mon'][0], (400, 20+n*size)) for n, line in enumerate(code)])(22)
 
 	# Images
 	dice = pygame.image.load('C:/Users/Jonatan/Desktop/Python/resources/dice.png').convert()
@@ -162,7 +166,8 @@ def main():
 	# TODO: Dynamic text utilities
 	mouse = pygame.mouse.get_pos()
 	mFont = pygame.font.SysFont('oldenglishtext', 20)
-	mMarkup = renderLines([con.parseMarkup('<fg=OP>X</>: %d' % mouse[0]), ('<fg=OP>Y</>: %d' % mouse[1])], 20, 'oldenglishtext', (20, 20))
+	mMarkup = renderLines([con.parseMarkup('<fg=OP>X</>: %d' % mouse[0]), con.parseMarkup('<fg=OP>Y</>: %d' % mouse[1])], 20, 'oldenglishtext', (20, 20))
+	# print(mMarkup)
 	mCoords = None
 	mPrev = None
 
@@ -173,7 +178,7 @@ def main():
 			break;
 		elif ev.type == pygame.MOUSEMOTION:
 			mouse = ev.pos
-			mCoords = mFont.render('X: %d | Y: %d' % mouse, 3, (0xFC, 0xCC, 0x3E))
+			#mCoords = mFont.render('X: %d | Y: %d' % mouse, 3, (0xFC, 0xCC, 0x3E))
 			coll = pygame.Rect(SIZE[0]-15, -scrollY, 10, 60).collidepoint(ev.pos)
 			intensity = 1.5 if coll else 1.25
 			if coll and pygame.mouse.get_pressed()[0]:
@@ -198,7 +203,10 @@ def main():
 		θ += 0.02
 
 		# Mouse
-		if mCoords is not None: surface.blit(mCoords, (20, 20))
+		if mCoords is not None:
+			#surface.blit(mCoords, (20, 20))
+			for token, pos in mMarkup:
+				surface.blit(token, pos)
 		#pygame.draw.polygon(surface, ((255+255*cos(θ))//2, (255+255*sin(θ))//2, 0xF9), (lambda sides: [(160+60*(sin(θ)+1.5)*cos(θ+s*2*π/sides),
 		#																  160+60*(sin(θ)+1.5)*sin(θ+s*2*π/sides)) for s in range(sides)])(10), 5)
 
@@ -219,9 +227,15 @@ def main():
 		pygame.draw.rect(surface, (colours['BG'][0]*intensity, colours['BG'][0]*intensity, colours['BG'][0]*intensity), pygame.Rect(SIZE[0]-15, -scrollY, 10, 60))
 
 		# Blit code
-		for n, line in enumerate(lines):
-			for token in line:
-				surface.blit(token[0], (token[1][0], scrollY+token[1][1]+n*15))
+		for n, line in renderLines(code, 20, fontNames[0], (300, 40)):
+			for token, pos in line:
+				surface.blit(token, pos)
+			
+		# Blit coords
+		for n, line in enumerate(renderLines([con.parseMarkup('<fg=OP>X</>: <fg=LIT>%d</>' % mouse[0]),
+											  con.parseMarkup('<fg=OP>Y</>: <fg=LIT>%d</>' % mouse[1])], 20, 'oldenglishtext', (20, 20))):
+			for token, pos in line:
+				surface.blit(token, pos)
 
 		# Blit font names
 		for n, label in enumerate(labels):
